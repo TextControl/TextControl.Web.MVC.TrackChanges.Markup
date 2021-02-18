@@ -1,0 +1,93 @@
+﻿@using TXTextControl.Web.MVC
+
+@Html.TXTextControl().TextControl().LoadText(
+    Server.MapPath("~/App_Data/nda.tx"),
+    TXTextControl.Web.StreamType.InternalUnicodeFormat).Render()
+
+<div id="trackedChangeState" class="btn-group btn-group-toggle" data-toggle="buttons">
+    <label class="btn btn-secondary active">
+        <input type="radio" name="options" id="stateEdit" autocomplete="off" checked> Edit
+    </label>
+    <label class="btn btn-secondary">
+        <input type="radio" name="options" id="stateOriginal" autocomplete="off"> Original Preview
+    </label>
+    <label class="btn btn-secondary">
+        <input type="radio" name="options" id="stateNoMarkup" autocomplete="off"> No Markup Preview
+    </label>
+</div>
+
+@section Scripts {
+
+    <script>
+        
+        $("#trackedChangeState input:radio").change(function () {
+            
+            switch ($(this).attr('id')) {
+
+                case "stateEdit":
+                    reloadDocumentState()
+                    break
+
+                case "stateOriginal":
+                    trackChangesOriginal();
+                    break;
+
+                case "stateNoMarkup":
+                    trackChangesNoMarkup();
+                    break;
+            }
+            
+        });
+
+        var doc = null;
+
+        function trackChangesOriginal() {
+            storeDocumentState();
+            removeAllChanges(false);
+        }
+
+        function trackChangesNoMarkup() {
+            storeDocumentState();
+            removeAllChanges(true);
+        }
+
+        function storeDocumentState() {
+
+            if (doc !== null)
+                reloadDocumentState();
+
+            // set editor to read only
+            TXTextControl.editMode = 2;
+
+            // store the document
+            TXTextControl.saveDocument(TXTextControl.StreamType.InternalUnicodeFormat, document => {
+                doc = document.data;
+            });
+        }
+
+        function reloadDocumentState() {
+
+            // set editor to edit mode
+            TXTextControl.editMode = 1;
+
+            // restore document
+            TXTextControl.loadDocument(TXTextControl.StreamType.InternalUnicodeFormat, doc);
+        }
+
+        function removeAllChanges(accept) {
+            TXTextControl.trackedChanges.getCount(count => {
+
+                if (count === 0) return;
+
+                // recursively loop through all changes
+                // and remove them
+                TXTextControl.trackedChanges.elementAt(0, element => {
+                    TXTextControl.trackedChanges.remove(element, accept, deleted => {
+                        if (deleted === true) removeAllChanges(accept);
+                    });
+                });
+
+            });
+        }
+    </script>
+}
